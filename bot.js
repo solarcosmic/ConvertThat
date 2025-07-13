@@ -2,6 +2,7 @@ const { Client, Events, GatewayIntentBits, ContextMenuCommandBuilder, Applicatio
 const wait = require("node:timers/promises").setTimeout;
 const sharp = require("sharp");
 const axios = require("axios");
+const getColours = require("get-image-colors");
 const { StringSelectMenuBuilder } = require("@discordjs/builders");
 const { StringSelectMenuOptionBuilder } = require("@discordjs/builders");
 const dotenv = require("dotenv").config();
@@ -25,19 +26,6 @@ client.on("ready", async () => {
 client.on("messageCreate", message => {
     console.log(message.content);
 })
-
-/* const pngButton = new ButtonBuilder()
-    .setCustomId("png_select")
-    .setLabel(".png")
-    .setStyle(ButtonStyle.Primary);
-
-const jpgButton = new ButtonBuilder()
-    .setCustomId("jpg_select")
-    .setLabel(".jpg")
-    .setStyle(ButtonStyle.Secondary);
-
-const row = new ActionRowBuilder()
-    .addComponents(pngButton, jpgButton); */
 
 const format_sel = new StringSelectMenuBuilder()
     .setCustomId("format_sel")
@@ -91,9 +79,17 @@ client.on(Events.InteractionCreate, async interaction => {
     const img = await convertImage(item.url, format);
     const fileName = item.name.substring(0, item.name.lastIndexOf("."));
     const combined = fileName + "." + format.slice(6);
-    console.log(combined);
     const attach = new AttachmentBuilder(img, {name: combined});
-    const sent = await interaction.followUp({
+    var mainColour = "#00b0f4";
+    try {
+        const colours = await getColours(img, format);
+        if (colours && colours.length > 0) {
+            mainColour = colours[0].hex();
+        }
+    } catch (e) {
+        console.log("Error while gathering colours: " + e);
+    }
+    await interaction.followUp({
         embeds: [
             new EmbedBuilder()
                 .setTitle(attach.name)
@@ -105,7 +101,7 @@ client.on(Events.InteractionCreate, async interaction => {
                     }
                 )
                 .setImage("attachment://" + combined)
-                .setColor("#00b0f4")
+                .setColor(mainColour)
                 .setFooter({text: "ConvertThat"})
                 .setTimestamp()
         ],
@@ -121,13 +117,6 @@ async function convertImage(url, format) {
         resp = await axios.get(url, {responseType: "arraybuffer"});
         if (resp) buffer = Buffer.from(resp.data);
         return await sharp(buffer).toFormat(format.slice(6)).toBuffer();
-        /*if (format == "image/png") {
-            return await sharp(buffer).png().toBuffer();
-        } else if (format == "image/jpeg") {
-            return await sharp(buffer).jpeg().toBuffer();
-        } else if (format == "image/webp") {
-            return await sharp(buffer).webp().toBuffer();
-        }*/
     } catch (e) {
         console.log("Conversion error: " + e);
     }
