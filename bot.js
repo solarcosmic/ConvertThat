@@ -1,4 +1,4 @@
-const { Client, Events, GatewayIntentBits, ContextMenuCommandBuilder, ApplicationCommandType, REST, Routes, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags, EmbedBuilder, AttachmentBuilder } = require("discord.js");
+const { Client, Events, GatewayIntentBits, ContextMenuCommandBuilder, ApplicationCommandType, REST, Routes, ButtonBuilder, ButtonStyle, ActionRowBuilder, MessageFlags, EmbedBuilder, AttachmentBuilder, ComponentType } = require("discord.js");
 const wait = require("node:timers/promises").setTimeout;
 const sharp = require("sharp");
 const axios = require("axios");
@@ -58,6 +58,7 @@ const row_btn = new ActionRowBuilder()
 
 var toConvert = null;
 const convertMap = new Map();
+const convertedMap = new Map();
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isMessageContextMenuCommand()) return;
     const attach = interaction.targetMessage.attachments.first();
@@ -83,12 +84,13 @@ client.on(Events.InteractionCreate, async interaction => {
         return;
     }
     await interaction.update({content: "Converting your image to your selected format. This may take a while.", components: []});
+    const confirm = await interaction.fetchReply();
     const format = interaction.values[0];
     const img = await convertImage(item.url, format);
     const fileName = item.name.substring(0, item.name.lastIndexOf("."));
     const combined = fileName + "." + format.slice(6);
     const attach = new AttachmentBuilder(img, {name: combined});
-    var mainColour = "#00b0f4";
+    var mainColour = null;
     try {
         const colours = await getColours(img, format);
         if (colours && colours.length > 0) {
@@ -97,33 +99,51 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (e) {
         console.log("Error while gathering colours: " + e);
     }
-    await interaction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle(attach.name)
-                .addFields(
-                    {
-                        name: "Conversion",
-                        value: `${item.contentType.slice(6).toUpperCase()} -> ${format.slice(6).toUpperCase()}`,
-                        inline: true
-                    }
-                )
-                .setImage("attachment://" + combined)
-                .setColor(mainColour)
-                .setFooter({text: "ConvertThat"})
-                .setTimestamp()
-        ],
+    const emb = new EmbedBuilder()
+        .setTitle(attach.name)
+        .addFields(
+            {
+                name: "Conversion",
+                value: `${item.contentType.slice(6).toUpperCase()} -> ${format.slice(6).toUpperCase()}`,
+                inline: true
+            }
+        )
+        .setImage("attachment://" + combined)
+        .setFooter({text: "ConvertThat"})
+        .setTimestamp()
+    if (mainColour) emb.setColor(mainColour);
+    if (format == "image/webp") emb.setDescription("Note: WebP accent colours are not supported. Resorting to default.");
+    const sent = await interaction.editReply({
+        content: "",
+        embeds: [emb],
         components: [row_btn],
         files: [attach],
-        ephemeral: true
+        ephemeral: true,
+        fetchReply: true
     });
-})
-
-client.on(Events.InteractionCreate, async interaction => {
-    if (!interaction.isButton) return;
-    if (interaction.customId == "get_direct_link_img_convert") {
-        // TODO: implement
-    }
+    console.log("Converted image named " + combined + ` (${item.contentType.slice(6).toUpperCase()} -> ${format.slice(6).toUpperCase()})`);
+    const collector = sent.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        time: 60_000 // callback timeout thing
+    })
+    collector.on("collect", async btninter => {
+        if (!btninter.isButton()) return;
+        if (btninter.customId == "get_direct_link_img_convert") {
+            await btninter.deferReply({ephemeral: true})
+            const n_embed = sent.embeds[0];
+            if (!n_embed || !n_embed.image || !n_embed.image.url) {
+                await btninter.followUp({
+                    content: "Couldn't find the attachment image!",
+                    ephemeral: true
+                });
+                return;
+            }
+            const link_embed = await btninter.followUp({
+                content: `Here's the direct link! \n[Direct Link - ${combined}](<${n_embed.image.url}>)` + "\n\nHowever, if you want to copy the link directly: ```" + `<${n_embed.image.url}>` + "```",
+                ephemeral: true
+            });
+        }
+    })
 })
 
 async function convertImage(url, format) {
