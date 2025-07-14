@@ -45,8 +45,16 @@ const format_sel = new StringSelectMenuBuilder()
             .setValue("image/webp")
     )
 
+const buttons = new ButtonBuilder()
+    .setLabel("Get Direct Link")
+    .setCustomId("get_direct_link_img_convert")
+    .setStyle(ButtonStyle.Secondary);
+
 const row = new ActionRowBuilder()
     .addComponents(format_sel);
+
+const row_btn = new ActionRowBuilder()
+    .addComponents(buttons);
 
 var toConvert = null;
 const convertMap = new Map();
@@ -105,9 +113,17 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setFooter({text: "ConvertThat"})
                 .setTimestamp()
         ],
+        components: [row_btn],
         files: [attach],
         ephemeral: true
     });
+})
+
+client.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isButton) return;
+    if (interaction.customId == "get_direct_link_img_convert") {
+        // TODO: implement
+    }
 })
 
 async function convertImage(url, format) {
