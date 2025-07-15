@@ -40,20 +40,18 @@ require("dotenv").config();
 const token = process.env.CLIENT_TOKEN;
 const rest = new REST({version: "10"}).setToken(token);
 const clientId = process.env.CLIENT_ID;
-const guildId = process.env.GUILD_ID; // TODO: remove
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages]});
-const convertImgContext = new ContextMenuCommandBuilder()
-    .setName("Convert Image")
-    .setType(ApplicationCommandType.Message)
 const compressImgContext = new ContextMenuCommandBuilder()
     .setName("Compress Image")
     .setType(ApplicationCommandType.Message)
-
+const convertImgContext = new ContextMenuCommandBuilder()
+    .setName("Convert Image")
+    .setType(ApplicationCommandType.Message)
 client.on("ready", async () => {
     console.log("Running: " + client.user.tag);
     await rest.put(
-        Routes.applicationCommands(clientId, guildId),
+        Routes.applicationCommands(clientId),
         {body: [convertImgContext.toJSON(), compressImgContext.toJSON()]}
     );
 });
