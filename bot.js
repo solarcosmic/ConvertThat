@@ -23,7 +23,8 @@ const {
     EmbedBuilder,
     AttachmentBuilder,
     ComponentType,
-    TextInputStyle
+    TextInputStyle,
+    PresenceUpdateStatus
 } = require("discord.js");
 const {
     StringSelectMenuBuilder,
@@ -32,7 +33,6 @@ const {
     ModalBuilder
 } = require("@discordjs/builders");
 
-const wait = require("node:timers/promises").setTimeout; // probably not needed
 const sharp = require("sharp");
 const axios = require("axios");
 const getColours = require("get-image-colors");
@@ -57,6 +57,7 @@ client.on("ready", async () => {
         Routes.applicationCommands(clientId),
         {body: [convertImgContext.toJSON(), compressImgContext.toJSON()]}
     );
+    client.user.setStatus(PresenceUpdateStatus.Idle);
 });
 
 /*
@@ -129,7 +130,7 @@ client.on(Events.InteractionCreate, async interaction => {
         }
         if (interaction.commandName == "Convert Image") {
             convertMap.set(interaction.user.id, attach);
-            await interaction.reply({content: `What would you like to convert this image to (${attach.name})? \n-# By using this tool, you agree that you own the rights to that image and that you follow Discord T&S. ConvertThat and its contributors are not responsible for the image you submit. Converted images get uploaded to Discord.`, components: [row], flags: MessageFlags.Ephemeral});
+            await interaction.reply({content: `What would you like to convert this image to (${attach.name})? \n\n-# By using this tool, you agree that you own the rights to that image and that you follow Discord Terms. ConvertThat and its contributors are not responsible for the image you submit. Converted images get uploaded to Discord.`, components: [row], flags: MessageFlags.Ephemeral});
         } else if (interaction.commandName == "Compress Image") {
             convertMap.set(interaction.user.id, attach);
             await interaction.showModal(modal);
