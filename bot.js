@@ -41,6 +41,9 @@ const token = process.env.CLIENT_TOKEN;
 const rest = new REST({version: "10"}).setToken(token);
 const clientId = process.env.CLIENT_ID;
 
+/*
+ * Set up of the context menus.
+*/
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages]});
 const compressImgContext = new ContextMenuCommandBuilder()
     .setName("Compress Image")
@@ -106,7 +109,7 @@ modal.addComponents(modalBuild);
 
 const row_btn = new ActionRowBuilder().addComponents(buttons, compress);
 
-const convertMap = new Map();
+const convertMap = new Map(); // stores converted things
 
 /*
  * Main interactions (where everything happens).
@@ -146,7 +149,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 var url;
                 var title;
                 var content_type;
-                const embed = interaction.message?.embeds?.[0];
+                const embed = interaction.message?.embeds?.[0]; // neat trick
                 if (embed && embed.image?.url && embed.title) {
                     url = embed.image.url;
                     title = embed.title;
