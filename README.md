@@ -1,6 +1,9 @@
+<img width="1920" height="534" alt="convertthat_banner" src="https://github.com/user-attachments/assets/13256506-24ea-4b1e-8021-98342c143108" />
+
 # ConvertThat
 A Discord bot that lets you convert and compress images to different formats within Discord.
 ConvertThat only supports `PNG`, `JPG`/`JPEG`, and `WebP` at the moment, as Discord renders those formats.
+[Click here to invite ConvertBot!](https://discord.com/oauth2/authorize?client_id=1390994775859265598&permissions=2048&integration_type=0&scope=bot)
 
 ## How does ConvertThat work?
 ConvertThat uses Discord.js for the Discord bot framework, and the Node.js module "Sharp" behind the scenes to convert and compress images.
