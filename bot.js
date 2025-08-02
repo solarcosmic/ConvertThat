@@ -118,19 +118,21 @@ const convertMap = new Map(); // stores converted things
  * It's a bit of a mess, but it does the job and I would say is a solid attempt for one of my first bots written in Discord.js.
 */
 client.on(Events.InteractionCreate, async interaction => {
+    try {
     if (interaction.isMessageContextMenuCommand()) {
         const attach = interaction.targetMessage.attachments.first();
         if (!attach) {
-            await interaction.reply({content: `Image not found! Are you sure this is attached correctly?`, flags: MessageFlags.Ephemeral});
+            await interaction.editReply({content: `Image not found! Are you sure this is attached correctly?`, ephemeral: true});
             return;
         }
         if (!attach.contentType.includes("image")) {
-            await interaction.reply({content: `The attachment provided seems to not be a supported image! Only PNG, JPEG, and WebP file types are supported.`, flags: MessageFlags.Ephemeral});
+            await interaction.editReply({content: `The attachment provided seems to not be a supported image! Only PNG, JPEG, and WebP file types are supported.`, ephemeral: true});
             return;
         }
         if (interaction.commandName == "Convert Image") {
+            await interaction.deferReply({ephemeral: true});
             convertMap.set(interaction.user.id, attach);
-            await interaction.reply({content: `What would you like to convert this image to (${attach.name})? \n\n-# By using this tool, you agree that you own the rights to that image and that you follow Discord Terms. ConvertThat and its contributors are not responsible for the image you submit. Converted images get uploaded to Discord.`, components: [row], flags: MessageFlags.Ephemeral});
+            await interaction.editReply({content: `What would you like to convert this image to (${attach.name})? \n\n-# By using this tool, you agree that you own the rights to that image and that you follow Discord Terms. ConvertThat and its contributors are not responsible for the image you submit. Converted images get uploaded to Discord.`, components: [row], ephemeral: true});
         } else if (interaction.commandName == "Compress Image") {
             convertMap.set(interaction.user.id, attach);
             await interaction.showModal(modal);
@@ -143,7 +145,7 @@ client.on(Events.InteractionCreate, async interaction => {
             const numlevel = Number(level);
             if (numlevel) {
                 if (numlevel > 100) {
-                    await interaction.reply({content: `The number you have chosen is too high!`, flags: MessageFlags.Ephemeral});
+                    await interaction.reply({content: `The number you have chosen is too high!`, ephemeral: true});
                     return;
                 }
                 const newlevel = Math.floor(numlevel);
@@ -158,7 +160,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 } else {
                     const attach = convertMap.get(interaction.user.id);
                     if (!attach) {
-                        await interaction.reply({content: "Uh oh! Session expired... please retry.", flags: MessageFlags.Ephemeral});
+                        await interaction.reply({content: "Uh oh! Session expired... please retry.", ephemeral: true});
                         return;
                     }
                     url = attach.url;
@@ -199,13 +201,13 @@ client.on(Events.InteractionCreate, async interaction => {
                     embeds: [emb],
                     components: [row_btn],
                     files: [attach_thing],
-                    flags: MessageFlags.Ephemeral,
+                    ephemeral: true,
                     fetchReply: true
                 });
                 console.log("Compressed image named " + title + ` to quality ${newlevel}%`);
                 attachCollector(sent);
             } else {
-                await interaction.reply({content: `Please enter a valid number.`, flags: MessageFlags.Ephemeral});
+                await interaction.reply({content: `Please enter a valid number.`, ephemeral: true});
                 return;
             }
         }
@@ -253,11 +255,19 @@ client.on(Events.InteractionCreate, async interaction => {
         embeds: [emb],
         components: [row_btn],
         files: [attach],
-        flags: MessageFlags.Ephemeral,
+        ephemeral: true,
         fetchReply: true
     });
     console.log("Converted image named " + combined + ` (${item.contentType.slice(6).toUpperCase()} -> ${format.slice(6).toUpperCase()})`);
     attachCollector(sent);
+    } catch (e) {
+        console.log("Error: " + e);
+        if (interaction.deferred || interaction.replied) {
+            await interaction.followUp({content: `Error: ${e.message}`, ephemeral: true});
+        } else {
+            await interaction.reply({content: `Internal error. Please report this to developers. ${e}`, ephemeral: true});
+        }
+    }
 })
 
 /*
@@ -304,13 +314,13 @@ function attachCollector(sent) {
     collect.on("collect", async btninter => {
         if (!btninter.isButton()) return;
         if (btninter.customId == "get_direct_link_img_convert") { // direct link logic
-            await btninter.deferReply({flags: MessageFlags.Ephemeral});
+            await btninter.deferReply({ephemeral: true});
             const n_embed = sent.embeds[0];
             if (!n_embed || !n_embed.image || !n_embed.image.url) {
-                await btninter.followUp({content: "Couldn't find the attachment image!", flags: MessageFlags.Ephemeral});
+                await btninter.followUp({content: "Couldn't find the attachment image!", ephemeral: true});
                 return;
             }
-            await btninter.followUp({content: `Here's the direct link! \n[Direct Link - ${n_embed.title}](<${n_embed.image.url}>)` + "\n\nHowever, if you want to copy the link directly: ```" + `${n_embed.image.url}` + "```", flags: MessageFlags.Ephemeral});
+            await btninter.followUp({content: `Here's the direct link! \n[Direct Link - ${n_embed.title}](<${n_embed.image.url}>)` + "\n\nHowever, if you want to copy the link directly: ```" + `${n_embed.image.url}` + "```", ephemeral: true});
         } else if (btninter.customId == "compress_img_convert") {
             await btninter.showModal(modal);
         }
