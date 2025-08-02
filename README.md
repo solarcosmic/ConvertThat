@@ -10,6 +10,12 @@ ConvertThat uses Discord.js for the Discord bot framework, and the Node.js modul
 
 It uses axios to grab the attachment image link, then uses Sharp to convert it and export it as an image buffer. Sharp is also used to compress images to a certain quality, best shown with JPEG images.
 
+## How do I use ConvertThat?
+Simple! Find the image you would like to convert, right click on it, go to Apps, and choose whether you'd like to compress it or convert it.
+
+<img width="814" height="604" alt="image" src="https://github.com/user-attachments/assets/6deda9ae-d0ed-4a8b-bf8e-d2e8f284a72f" />
+
+
 ## How can I run it?
 Simple!
 1. Clone the GitHub repository or download a source code archive from the releases
