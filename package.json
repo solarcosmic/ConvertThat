@@ -22,6 +22,8 @@
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.0",
     "get-image-colors": "^4.0.1",
+    "image-size": "^2.0.2",
+    "image-type": "^6.0.0",
     "sharp": "^0.34.3"
   }
 }

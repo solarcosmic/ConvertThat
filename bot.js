@@ -19,7 +19,6 @@ const {
     ButtonBuilder,
     ButtonStyle,
     ActionRowBuilder,
-    MessageFlags,
     EmbedBuilder,
     AttachmentBuilder,
     ComponentType,
@@ -36,6 +35,8 @@ const {
 const sharp = require("sharp");
 const axios = require("axios");
 const getColours = require("get-image-colors");
+const imageType = require("image-type").default;
+const imageSize = require("image-size").default;
 require("dotenv").config();
 const token = process.env.CLIENT_TOKEN;
 const rest = new REST({version: "10"}).setToken(token);
@@ -92,6 +93,10 @@ const compress = new ButtonBuilder()
     .setLabel("Compress Image")
     .setCustomId("compress_img_convert")
     .setStyle(ButtonStyle.Secondary);
+const exifdatabtn = new ButtonBuilder()
+    .setLabel("Image Details")
+    .setCustomId("get_image_details_convertthat")
+    .setStyle(ButtonStyle.Secondary);
 const modal = new ModalBuilder()
     .setCustomId("compress_image_modal")
     .setTitle("Image Quality (Compress)");
@@ -108,7 +113,7 @@ const row = new ActionRowBuilder().addComponents(format_sel);
 const modalBuild = new ActionRowBuilder().addComponents(amountInput);
 modal.addComponents(modalBuild);
 
-const row_btn = new ActionRowBuilder().addComponents(buttons, compress);
+const row_btn = new ActionRowBuilder().addComponents(buttons, compress, exifdatabtn);
 
 const convertMap = new Map(); // stores converted things
 
@@ -132,7 +137,7 @@ client.on(Events.InteractionCreate, async interaction => {
         if (interaction.commandName == "Convert Image") {
             await interaction.deferReply({ephemeral: true});
             convertMap.set(interaction.user.id, attach);
-            await interaction.editReply({content: `What would you like to convert this image to (${attach.name})? \n\n-# By using this tool, you agree that you own the rights to that image and that you follow Discord Terms. ConvertThat and its contributors are not responsible for the image you submit. Converted images get uploaded to Discord.`, components: [row], ephemeral: true});
+            await interaction.editReply({content: `What would you like to convert this image to (${attach.name})? \n-# NOTE: WebP images are available, but not supported.\n\n-# By using this tool, you agree that you own the rights to that image and that you follow Discord Terms. ConvertThat and its contributors are not responsible for the image you submit. Converted images get uploaded to Discord.`, components: [row], ephemeral: true});
         } else if (interaction.commandName == "Compress Image") {
             convertMap.set(interaction.user.id, attach);
             await interaction.showModal(modal);
@@ -323,6 +328,65 @@ function attachCollector(sent) {
             await btninter.followUp({content: `Here's the direct link! \n[Direct Link - ${n_embed.title}](<${n_embed.image.url}>)` + "\n\nHowever, if you want to copy the link directly: ```" + `${n_embed.image.url}` + "```", ephemeral: true});
         } else if (btninter.customId == "compress_img_convert") {
             await btninter.showModal(modal);
+        } else if (btninter.customId == "get_image_details_convertthat") {
+            try {
+                var url;
+                var title;
+                const n_embed = sent.embeds[0];
+                if (n_embed && n_embed.image?.url && n_embed.title) {
+                    url = n_embed.image.url;
+                    title = n_embed.title;
+                } else {
+                    const attach = convertMap.get(btninter.user.id);
+                    if (!attach) {
+                        await btninter.reply({content: "Session expired. Please try again.", ephemeral: true});
+                        return;
+                    }
+                    url = attach.url;
+                    title = attach.name;
+                }
+                const resp = await axios.get(url, { responseType: "arraybuffer" });
+                const buffer = Buffer.from(resp.data);
+                const extmime = await imageType(buffer);
+                if (extmime.ext == "webp") {
+                    await btninter.deferReply({ephemeral: true});
+                    await btninter.followUp({content: "Image details for WebP images are not supported at this time. Consider using `png` or `jpg`.", ephemeral: true});
+                }
+                const colours = await getColours(buffer, extmime.mime); // npm: get-image-colours
+                var dataString = `File Extension: ${extmime.ext}\nMime Type: ${extmime.mime}`;
+                if (colours && colours.length > 0) {
+                    dataString += `\nColor Palette: ${colours}`;
+                }
+                var dimensionString = ``;
+                const imgSize = imageSize(buffer);
+                if (imgSize) dimensionString += `\n\nImage Size: ${imgSize.width}x${imgSize.height}`;
+                var bufferBytes = buffer.byteLength;
+                if (bufferBytes) dimensionString += `\nFile Size: ${((bufferBytes / 1024) / 1024).toFixed(2)}mb (${(bufferBytes / 1024).toFixed(2)}kb)`;
+                const emb = new EmbedBuilder()
+                    .setTitle(title)
+                    .addFields(
+                        {
+                            name: "Image Data",
+                            value: dataString,
+                            inline: true
+                        },
+                        {
+                            name: "Image Sizing",
+                            value: dimensionString,
+                            inline: true
+                        }
+                    )
+                    .setFooter({text: "ConvertThat"})
+                    .setTimestamp()
+                if (colours) emb.setColor(colours[0].hex());
+                await btninter.deferReply({ephemeral: true});
+                await btninter.followUp({embeds: [emb], ephemeral: true});
+            } catch (e) {
+                try {
+                    await btninter.deferReply({ephemeral: true});
+                    await btninter.followUp({content: "An error occurred while retrieving image data: " + e.message, ephemeral: true});
+                } catch (x) {}
+            }
         }
     })
 }
